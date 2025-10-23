@@ -1,1 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>File Organizer by Shameer</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#111827; --muted:#94a3b8; --accent:#60a5fa;
+    --accent-2:#a78bfa; --success:#34d399; --warning:#f59e0b; --white:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 600px at 70% -10%, #1f2937 0%, #0b1020 50%, var(--bg) 100%);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    color:var(--white); display:grid; place-items:center;
+  }
+  .wrap{
+    width:min(960px,94vw);
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow: 0 20px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+    border-radius:24px; padding:28px; position:relative; overflow:hidden;
+  }
+  .title{
+    display:flex; align-items:center; gap:10px; margin-bottom:8px; opacity:.9;
+    font-weight:800; letter-spacing:.3px; text-transform:uppercase; font-size:12px;
+  }
+  .surface{ display:grid; grid-template-columns:1.2fr .8fr; gap:24px; align-items:stretch; margin-top:8px; }
 
+  /* LEFT: input + glam */
+  .panel{
+    background:linear-gradient(180deg, rgba(96,165,250,.08), rgba(167,139,250,.08));
+    border:1px dashed rgba(148,163,184,.45);
+    border-radius:18px; padding:22px; position:relative; overflow:hidden;
+    min-height:340px; isolation:isolate;
+  }
+  .dz-inner{ text-align:center; max-width:520px; margin-inline:auto; position:relative; z-index:2; } /* stay above cards */
+
+  .hint{ color:var(--muted); font-size:14px; margin:8px 0 12px; }
+  .path-wrap{ position:relative; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .chip-belt{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:34px;
+    padding:4px 2px; position:relative;
+  }
+  .chip{
+    background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+    border:1px solid rgba(255,255,255,.12); color:#dbeafe; font-weight:600;
+    padding:6px 10px; border-radius:999px; transform:translateY(16px); opacity:0;
+    animation: chip-in .35s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes chip-in{ to{ transform:translateY(0); opacity:1; } }
+
+  .path{
+    width:100%; max-width:520px; padding:14px 16px; border:none; border-radius:14px; font-size:15px; text-align:center;
+    background:rgba(255,255,255,.06); color: var(--white);
+    border:1px solid rgba(255,255,255,.1); outline:none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+  }
+  .path::placeholder{ color:#cbd5e1 }
+  .path:focus{ box-shadow: inset 0 0 0 1px rgba(96,165,250,.45), 0 14px 40px rgba(96,165,250,.2); }
+
+  /* Sparks (on typing) */
+  .sparks{ position:absolute; inset:0; pointer-events:none; z-index:2; }
+  .spark{
+    position:absolute; width:6px; height:6px; border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, #fff, #9dd0ff 40%, transparent 60%);
+    opacity:.9; transform:translate(-50%,-50%) scale(.8);
+    animation: spark 600ms ease-out forwards; mix-blend-mode:screen; z-index:3;
+  }
+  @keyframes spark{
+    0%{ filter:blur(0px); opacity:.9; }
+    70%{ transform:translate(var(--tx), var(--ty)) scale(1.1); filter:blur(1px); opacity:.7; }
+    100%{ transform:translate(calc(var(--tx)*1.4), calc(var(--ty)*1.4)) scale(.6); opacity:0; filter:blur(2px); }
+  }
+
+  .btn{
+    appearance:none; border:0; border-radius:14px; padding:12px 18px; cursor:pointer; font-weight:800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:#041221;
+    box-shadow: 0 10px 30px rgba(96,165,250,.35);
+    transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+  }
+  .btn:hover{ transform: translateY(-1px); filter:saturate(1.1); box-shadow: 0 16px 40px rgba(96,165,250,.45); }
+
+  /* Decorative floating files (background) */
+  .file{
+    position:absolute; width:108px; aspect-ratio:3/4; border-radius:10px;
+    background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+    box-shadow: 0 10px 40px rgba(0,0,0,.25);
+    left: clamp(10px, 8vw, 38px); top: 70%; transform: translateY(-50%);
+    display:grid; grid-template-rows:auto 1fr; overflow:hidden; opacity:.25; pointer-events:none; z-index:0;
+  }
+  .file:before{ content:""; height:26px; background:linear-gradient(90deg, #e2e8f0, #f1f5f9); opacity:.25; }
+  .file .bar{ height:6px; margin:8px 10px; border-radius:4px; background:#e2e8f0; opacity:.2; }
+  .file .bar:nth-child(2){ width:70% } .file .bar:nth-child(3){ width:50% }
+  .file.f2{ left: clamp(90px, 22vw, 180px); top: 82% }
+  .file.f3{ left: clamp(170px, 34vw, 260px); top: 60% }
+  
+  /* Gentle idle float */
+  .idle .file{ opacity:.25; animation: floaty 4s ease-in-out infinite alternate; }
+  .idle .file.f2{ animation-delay:.12s } .idle .file.f3{ animation-delay:.24s }
+  @keyframes floaty{ from{ transform: translateY(-52%);} to{ transform: translateY(-58%);} }
+
+  /* During organizing keep the gentle float (no fast fly-away) */
+  .organizing .file{ animation: floaty 4s ease-in-out infinite alternate; }
+
+  /* RIGHT: folder + gears + steps */
+  .folder{
+    background:linear-gradient(180deg, rgba(17,24,39,.85), rgba(17,24,39,.6));
+    border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:18px; position:relative; overflow:hidden;
+    min-height:340px;
+  }
+  .status{ position:absolute; right:16px; top:14px; font-size:12px; color:var(--muted); }
+  .status.ok{ color: var(--success); font-weight:800; }
+  .server-msg{
+    margin-top:12px; font-size:13px; color: var(--white);
+    background: rgba(52,211,153,.12); border:1px solid rgba(52,211,153,.35);
+    padding:10px 12px; border-radius:10px;
+  }
+
+  .gear{ transform-origin:center; }
+  .organizing .gear.g1{ animation: spin 1.6s linear infinite; }
+  .organizing .gear.g2{ animation: spin 1.1s linear reverse infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg)} }
+
+  .steps{ margin:10px auto 0; max-width:220px; font-size:13px; color:#d1d5db }
+  .step{ display:flex; align-items:center; gap:8px; margin:8px 0; opacity:.4 }
+  .step i{ width:14px; height:14px; border-radius:50%; border:2px solid #94a3b8; display:inline-block }
+  .step.on{ opacity:1 }
+  .step.on i{ background:var(--success); border-color:var(--success); box-shadow: 0 0 0 4px rgba(52,211,153,.15); }
+
+  /* Progress bar with stripes */
+  .progress{ position:absolute; left:0; right:0; bottom:0; height:6px; background:rgba(148,163,184,.25); overflow:hidden }
+  .progress > i{
+    display:block; height:100%; width:0%;
+    background: repeating-linear-gradient(45deg, var(--accent) 0 16px, var(--accent-2) 16px 32px);
+    background-size: 28px 28px;
+    transition: width .35s ease;
+  }
+  .organizing .progress > i{ animation: stripes 1.1s linear infinite; }
+  @keyframes stripes{ to{ background-position: 56px 0 } }
+
+  /* Confetti canvas overlays the right panel only */
+  .confetti{ position:absolute; inset:0; pointer-events:none }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    .file, .gear, .chip, .spark, .progress > i { animation: none !important }
+    .progress > i{ background: linear-gradient(90deg, var(--accent), var(--accent-2));}
+  }
+
+  @media (max-width: 900px){
+    .surface{ grid-template-columns:1fr }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap idle" id="wrap">
+    <div class="title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.5"/></svg>
+      ORGANIZE FILES
+    </div>
+
+    <div class="surface">
+      <!-- LEFT: Input + glam -->
+      <div class="panel" id="panel">
+        <!-- background “file cards” -->
+        <div class="file f1"><div></div><div class="bar"></div><div class="bar"></div><div class="bar" style="width:62%"></div></div>
+        <div class="file f2"><div></div><div class="bar"></div><div class="bar"></div><div class="bar" style="width:40%"></div></div>
+        <div class="file f3"><div></div><div class="bar"></div><div class="bar"></div><div class="bar" style="width:55%"></div></div>
+
+        <canvas class="sparks" id="sparks" aria-hidden="true"></canvas>
+
+        <div class="dz-inner">
+          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 15a5 5 0 0 1 9.58-2H18a3 3 0 1 1 0 6H7a3 3 0 0 1 0-6h.06A5 5 0 0 1 7 15Z" stroke="currentColor" stroke-width="1.25"/>
+            <path d="M12 12v7" stroke="currentColor" stroke-width="1.25"/>
+            <path d="M9.5 14.5 12 12l2.5 2.5" stroke="currentColor" stroke-width="1.25"/>
+          </svg>
+          <div class="hint">Paste your folder path and hit organize. Enjoy the ✨ spectacle.</div>
+
+          <div class="path-wrap">
+            <div class="chip-belt" id="belt" aria-hidden="true"></div>
+            <form id="orgForm" method="POST" action="" autocomplete="off" novalidate>
+              <input class="path" id="path" name="folder_path" placeholder="C:\Users\YourName\Downloads" required />
+              <div style="height:12px"></div>
+              <button type="submit" class="btn" id="btn">Organize Files</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+      </div>
+
+      <!-- RIGHT: Folder + gears + steps -->
+      <div class="folder" id="folder" data-has-message="0">
+        <div class="status" id="status">Idle</div>
+
+        <svg viewBox="0 0 256 168" aria-hidden="true" style="display:block; margin:0 auto; max-width:240px;">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/>
+            </linearGradient>
+          </defs>
+          <!-- folder base -->
+          <rect x="24" y="72" width="208" height="80" rx="14" fill="url(#g1)" opacity=".22"/>
+          <rect x="28" y="76" width="200" height="72" rx="12" fill="#0b1222" stroke="rgba(255,255,255,.1)"/>
+          <!-- tab -->
+          <path d="M48 68c0-6.6 5.4-12 12-12h28l10 10h48c6.6 0 12 5.4 12 12v4H48v-14Z" fill="#0b1222" stroke="rgba(255,255,255,.1)"/>
+
+          <!-- gears -->
+          <g transform="translate(60,34)" opacity=".9">
+            <g class="gear g1">
+              <circle cx="0" cy="0" r="10" fill="#1f2937" stroke="#60a5fa" stroke-width="2"/>
+              <g fill="#60a5fa">
+                <rect x="-2" y="-16" width="4" height="6" rx="1"/>
+                <rect x="-2" y="10" width="4" height="6" rx="1"/>
+                <rect x="-16" y="-2" width="6" height="4" rx="1"/>
+                <rect x="10" y="-2" width="6" height="4" rx="1"/>
+              </g>
+            </g>
+            <g transform="translate(34,8)" class="gear g2">
+              <circle cx="0" cy="0" r="8" fill="#1f2937" stroke="#a78bfa" stroke-width="2"/>
+              <g fill="#a78bfa">
+                <rect x="-2" y="-13" width="4" height="5" rx="1"/>
+                <rect x="-2" y="8" width="4" height="5" rx="1"/>
+                <rect x="-13" y="-2" width="5" height="4" rx="1"/>
+                <rect x="8" y="-2" width="5" height="4" rx="1"/>
+              </g>
+            </g>
+          </g>
+
+          <!-- glossy line -->
+          <path d="M36 80h184" stroke="rgba(255,255,255,.08)"/>
+        </svg>
+
+        <div class="steps" id="steps" aria-live="polite">
+          <div class="step" data-step="1"><i></i> Scan files</div>
+          <div class="step" data-step="2"><i></i> Group by type</div>
+          <div class="step" data-step="3"><i></i> Rename & tidy</div>
+          <div class="step" data-step="4"><i></i> Move to folders</div>
+        </div>
+
+        <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+
+        <div class="server-msg" id="serverMsg" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const DURATION_MS = 45000;          // << 1 minute total animation
+  const TICK_MS     = 500;            // progress update frequency
+  const STEPS_TOTAL = 4;              // number of checklist steps
+
+  const wrap   = document.getElementById('wrap');
+  const panel  = document.getElementById('panel');
+  const belt   = document.getElementById('belt');
+  const input  = document.getElementById('path');
+  const form   = document.getElementById('orgForm');
+  const bar    = document.getElementById('bar');
+  const status = document.getElementById('status');
+  const sparks = document.getElementById('sparks');
+  const conf   = document.getElementById('confetti');
+  const steps  = Array.from(document.querySelectorAll('.step'));
+  const serverMsg = document.getElementById('serverMsg');
+  const hasMsgFlag = document.getElementById('folder').dataset.hasMessage === '1';
+
+  /* Canvas helpers */
+  function fitCanvas(c){
+    const r = c.getBoundingClientRect();
+    c.width = r.width * devicePixelRatio;
+    c.height = r.height * devicePixelRatio;
+    c.style.width = r.width+'px';
+    c.style.height = r.height+'px';
+    const ctx = c.getContext('2d');
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    return ctx;
+  }
+  let spx = fitCanvas(sparks), cfx = fitCanvas(conf);
+  window.addEventListener('resize', ()=>{ spx = fitCanvas(sparks); cfx = fitCanvas(conf); });
+
+  /* ---------- Typing sparks + belt chips ---------- */
+  function spawnSpark(x,y){
+    const d = document.createElement('div');
+    d.className = 'spark';
+    const ang = Math.random()*Math.PI*2, dist = 40 + Math.random()*40;
+    d.style.left = x+'px'; d.style.top = y+'px';
+    d.style.setProperty('--tx', Math.cos(ang)*dist+'px');
+    d.style.setProperty('--ty', Math.sin(ang)*dist+'px');
+    panel.appendChild(d);
+    setTimeout(()=> d.remove(), 650);
+  }
+  function beltChipsFromPath(val){
+    belt.innerHTML = '';
+    if(!val) return;
+    const parts = val.split(/[\\/]/).filter(Boolean);
+    parts.forEach((p,i)=>{
+      const el = document.createElement('span'); el.className='chip'; el.textContent = p;
+      el.style.animationDelay = (i*60)+'ms';
+      belt.appendChild(el);
+    });
+  }
+  input.addEventListener('input', (e)=>{
+    const val = e.target.value;
+    beltChipsFromPath(val);
+    const r = input.getBoundingClientRect();
+    const x = r.left + r.width/2 + (Math.random()*r.width/3 - r.width/6);
+    const y = r.top + r.height/2 + (Math.random()*10 - 5);
+    spawnSpark(x, y);
+  });
+
+  /* ---------- Organizing sequence (60s) ---------- */
+  let busy = false;
+
+  function animateSteps(durationMs){
+    steps.forEach(s=> s.classList.remove('on'));
+    const perStep = durationMs / STEPS_TOTAL; // 15s each
+    let i = 0;
+    function advance(){
+      if(i < steps.length){
+        steps[i].classList.add('on');
+        i++;
+        setTimeout(advance, perStep);
+      }
+    }
+    advance();
+  }
+
+  function startOrganizingVisuals(){
+    if(busy) return ()=>{};
+    busy = true;
+    wrap.classList.remove('idle');
+    wrap.classList.add('organizing');
+    status.textContent = 'Organizing…';
+    status.classList.remove('ok');
+    animateSteps(DURATION_MS);
+
+    // progress over ~60s up to 96%, then complete at the end
+    let p = 0;
+    bar.style.width = '0%';
+    const INC = 96 / (DURATION_MS / TICK_MS); // ~0.8% per tick
+    const tick = setInterval(()=>{
+      p = Math.min(96, p + INC + (Math.random()*0.2 - 0.1)); // tiny jitter
+      bar.style.width = p.toFixed(2) + '%';
+    }, TICK_MS);
+    return () => clearInterval(tick);
+  }
+
+  /* Confetti burst */
+  function confettiBurst(){
+    const N = 80, pieces=[];
+    const R = conf.getBoundingClientRect();
+    for(let i=0;i<N;i++){
+      pieces.push({
+        x: R.width/2, y: 20, vx: (Math.random()*2-1)*3, vy: - (2+Math.random()*2),
+        rot: Math.random()*Math.PI, vr: (Math.random()*2-1)*.2,
+        size: 6+Math.random()*8, life: 0, hue: Math.random()*360
+      });
+    }
+    const start = performance.now();
+    function step(t){
+      const dt = (t-start)/1000;
+      cfx.clearRect(0,0,R.width,R.height);
+      pieces.forEach(p=>{
+        p.vy += 0.08; p.x += p.vx*2; p.y += p.vy*2; p.rot += p.vr; p.life += 0.016;
+        cfx.save(); cfx.translate(p.x, p.y); cfx.rotate(p.rot);
+        cfx.fillStyle = `hsl(${p.hue}, 80%, ${50+Math.sin(p.life*6)*10}%)`;
+        cfx.beginPath();
+        cfx.moveTo(-p.size/2, p.size/2); cfx.lineTo(p.size/2, p.size/2); cfx.lineTo(0, -p.size/2); cfx.closePath();
+        cfx.fill(); cfx.restore();
+      });
+      if(dt < 2.2) requestAnimationFrame(step); else cfx.clearRect(0,0,R.width,R.height);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* Submit handler */
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const stopTick = startOrganizingVisuals();
+
+    const afterCinematic = ()=>{
+      stopTick && stopTick();
+      bar.style.width = '100%';
+
+      if (location.protocol === 'file:') {
+        // Demo mode
+        status.classList.add('ok'); status.textContent = 'Done ✓';
+        serverMsg.style.display = 'block';
+        serverMsg.textContent = 'Organized successfully (demo mode). Hook this form to your backend to run the real operation.';
+        confettiBurst();
+        // reset after a short breather
+        setTimeout(()=>{
+          wrap.classList.remove('organizing');
+          wrap.classList.add('idle');
+          busy = false;
+          bar.style.width = '0%';
+          status.textContent = 'Idle';
+          status.classList.remove('ok');
+          steps.forEach(s=> s.classList.remove('on'));
+        }, 2500);
+      } else {
+        // Real submit to backend
+        form.submit();
+      }
+    };
+
+    // Let the full 60s sequence play, then finalize
+    setTimeout(afterCinematic, DURATION_MS);
+  });
+
+  /* Idle mode at start */
+  (function init(){
+    wrap.classList.add('idle');
+    // Optional: success via ?ok=1 for testing on a server
+    const params = new URLSearchParams(location.search);
+    if (params.get('ok') === '1' || hasMsgFlag) {
+      status.classList.add('ok'); status.textContent = 'Done ✓';
+      bar.style.width = '100%';
+      serverMsg.style.display = 'block';
+      serverMsg.textContent = 'Your files have been organized.';
+      confettiBurst();
+    }
+  })();
+</script>
+</body>
+</html>
